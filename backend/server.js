@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const express = require("express");
 const app = express();
+const cors = require("cors");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
