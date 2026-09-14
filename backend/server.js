@@ -23,10 +23,27 @@ app.get("/", (req, res) => {
 
 app.get("/todos", requireAuth, async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM todos WHERE user_id = $1", [
-      req.userId,
-    ]);
-    res.json(result.rows);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 5;
+    const offset = (page - 1) * limit;
+
+    const result = await pool.query(
+      "SELECT * FROM todos WHERE user_id = $1 ORDER BY id LIMIT $2 OFFSET $3",
+      [req.userId, limit, offset],
+    );
+
+    const countResult = await pool.query(
+      "SELECT COUNT(*) FROM todos WHERE user_id = $1",
+      [req.userId],
+    );
+    const totalCount = Number(countResult.rows[0].count);
+
+    res.json({
+      todos: result.rows,
+      totalCount,
+      page,
+      totalPages: Math.ceil(totalCount / limit),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "เกิดข้อผิดพลาดฝั่ง server" });
