@@ -26,15 +26,28 @@ app.get("/todos", requireAuth, async (req, res) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 5;
     const offset = (page - 1) * limit;
+    const sortOrder = req.query.sort === "desc" ? "DESC" : "ASC";
+
+    let whereClause = "WHERE user_id = $1";
+    const params = [req.userId];
+
+    if (req.query.done === "true" || req.query.done === "false") {
+      whereClause += " AND done = $2";
+      params.push(req.query.done === "true");
+    }
+
+    params.push(limit, offset);
+    const limitParamIndex = params.length - 1;
+    const offsetParamIndex = params.length;
 
     const result = await pool.query(
-      "SELECT * FROM todos WHERE user_id = $1 ORDER BY id LIMIT $2 OFFSET $3",
-      [req.userId, limit, offset],
+      `SELECT * FROM todos ${whereClause} ORDER BY id ${sortOrder} LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`,
+      params,
     );
 
     const countResult = await pool.query(
-      "SELECT COUNT(*) FROM todos WHERE user_id = $1",
-      [req.userId],
+      `SELECT COUNT(*) FROM todos ${whereClause}`,
+      params.slice(0, params.length - 2),
     );
     const totalCount = Number(countResult.rows[0].count);
 
